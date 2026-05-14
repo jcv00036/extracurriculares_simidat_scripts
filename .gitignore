@@ -1,0 +1,6 @@
+Estudio variables/.venv
+Estudio variables/conf/aproximacion_piranometro.yaml
+Estudio variables/out/bland_altman_piranometro.png
+Script DataFrame/in/*
+Script DataFrame/out/*
+Estudio variables/in
