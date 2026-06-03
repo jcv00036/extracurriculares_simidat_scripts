@@ -1,7 +1,5 @@
-Estudio variables/.venv
-Estudio variables/conf/aproximacion_piranometro.yaml
-Estudio variables/out
-Script DataFrame/in/*
-Script DataFrame/out/*
-Estudio variables/in
-Estudio variables/outputs
+*.venv
+cuadernos/*
+!cuadernos/*.ipynb
+datos/*
+!datos/*.py
