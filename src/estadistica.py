@@ -89,3 +89,23 @@ def interpretar_bland_altman(resultado : dict, u_medida : str = None):
         print("- La línea de igualdad (y=0) no está dentro del intervalo de confianza del sesgo, por lo que el sesgo es estadísticamente significativo.")
     else:
         print("- La línea de igualdad (y=0) está dentro del intervalo de confianza del sesgo, por lo que el sesgo no es estadísticamente significativo.")
+        
+def rmse(serie1: pd.Series, serie2: pd.Series):
+    """
+    Calcula el error cuadrático medio entre dos series temporales
+
+    Args:
+        serie1: primera serie temporal
+        serie2: segunda serie temporal
+    """
+    return ((serie1 - serie2) ** 2).mean() ** 0.5
+
+def mae(serie1: pd.Series, serie2: pd.Series):
+    """
+    Calcula el error absoluto medio entre dos series temporales
+
+    Args:
+        serie1: primera serie temporal
+        serie2: segunda serie temporal
+    """
+    return (serie1 - serie2).abs().mean()

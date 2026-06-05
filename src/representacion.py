@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import tabulate
+
+from .estadistica import *
 
 def mostrar_serie(serie, titulo=None):
     """
@@ -54,11 +58,11 @@ def mostrar_bland_altman(resultado: dict, titulo=None, u_medida=None):
     plt.figure(figsize=(10, 5))
     plt.scatter(resultado["m"], resultado["d"], color='cyan', alpha=0.5)                # Gráfico de dispersión de las diferencias vs las medias
     plt.axhline(0, color='red', linestyle='-')                                          # Línea de referencia en 0
-    plt.axhline(resultado["sesgo"], color='red', linestyle='--', label='Sesgo')         # Línea del sesgo
+    plt.axhline(resultado["sesgo"], color='red', linestyle='--', label=f'Sesgo: {resultado["sesgo"]:.5f}')         # Línea del sesgo
     plt.axhline(resultado["sesgo"] - resultado["margen_error_sesgo"], color='orange', linestyle='-.', label=f'Intervalo de confianza inferior del sesgo: {resultado["sesgo"] - resultado["margen_error_sesgo"]:.5f}')    # Línea del límite inferior del intervalo de confianza del sesgo
     plt.axhline(resultado["sesgo"] + resultado["margen_error_sesgo"], color='orange', linestyle='-.', label=f'Intervalo de confianza superior del sesgo: {resultado["sesgo"] + resultado["margen_error_sesgo"]:.5f}')    # Línea del límite superior del intervalo de confianza del sesgo
-    plt.axhline(resultado["lim_inf"], color='blue', linestyle='--', label='Límite Inferior')    # Línea del límite inferior de acuerdo
-    plt.axhline(resultado["lim_sup"], color='green', linestyle='--', label='Límite Superior')   # Línea del límite superior de acuerdo
+    plt.axhline(resultado["lim_inf"], color='blue', linestyle='--', label=f'Límite Inferior: {resultado["lim_inf"]:.5f}')    # Línea del límite inferior de acuerdo
+    plt.axhline(resultado["lim_sup"], color='green', linestyle='--', label=f'Límite Superior: {resultado["lim_sup"]:.5f}')   # Línea del límite superior de acuerdo
     if titulo:
         plt.title(titulo)
     plt.xlabel(f'Media de las lecturas ({u_medida})' if u_medida else 'Media de las lecturas')
@@ -92,3 +96,36 @@ def mostrar_scatter_plot(serie_x, serie_y, titulo=None, titulo_serie_x=None, tit
     plt.ylabel(f'{titulo_serie_y} ({u_medida_y})' if u_medida_y else f'{titulo_serie_y}')
     plt.grid()
     plt.show()
+    
+def fila_diferencia_series(metodo, serie1, serie2):
+    """
+    
+    Crea la fila de una tabla de las diferencias entre dos series temporales
+
+    Args:
+        metodo: nombre del método de predicción utilizado
+        serie1: primera serie temporal
+        serie2: segunda serie temporal
+    """
+    
+    funciones_diferencia = [rmse, mae]
+    nombre_funciones = [nom for nom in [fun.__name__.upper() for fun in funciones_diferencia]]
+    
+    diferencias = [dif for dif in [fun(serie1, serie2) for fun in funciones_diferencia]]
+    
+    fila = pd.DataFrame([diferencias], columns=nombre_funciones)
+    fila.insert(0, "Método", metodo)
+    
+    return fila
+
+def tabla_diferencias(filas, formato = 'latex_booktabs'):
+    """
+    
+    Crea una tabla de las diferencias entre varias series temporales
+
+    Args:
+        filas: lista de filas con las diferencias entre series temporales (generadas por la función fila_diferencia_series)
+        formato: formato de la tabla (opcional, por defecto 'latex_booktabs')
+    """
+    tabla = pd.concat(filas, ignore_index=True)
+    return tabulate.tabulate(tabla, headers=[r"\textbf{" + c + "}" for c in tabla.columns], tablefmt=formato, showindex=False)
