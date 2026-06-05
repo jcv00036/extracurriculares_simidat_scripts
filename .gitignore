@@ -3,3 +3,5 @@ cuadernos/*
 !cuadernos/*.ipynb
 datos/*
 !datos/*.py
+*/__pycache__/*
+salida/*
