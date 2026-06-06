@@ -118,14 +118,14 @@ def fila_diferencia_series(metodo, serie1, serie2):
     
     return fila
 
-def tabla_diferencias(filas, formato = 'latex_booktabs'):
+def tabla_diferencias(filas):
     """
     
     Crea una tabla de las diferencias entre varias series temporales
 
     Args:
         filas: lista de filas con las diferencias entre series temporales (generadas por la función fila_diferencia_series)
-        formato: formato de la tabla (opcional, por defecto 'latex_booktabs')
     """
     tabla = pd.concat(filas, ignore_index=True)
-    return tabulate.tabulate(tabla, headers=[r"\textbf{" + c + "}" for c in tabla.columns], tablefmt=formato, showindex=False)
+    tabla.columns = [r"\textbf{"+c+"}" for c in tabla.columns]
+    return tabla.to_latex(index=False, escape=False)
