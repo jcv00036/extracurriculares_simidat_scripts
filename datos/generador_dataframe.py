@@ -5,6 +5,8 @@ import os
 import pandas as pd
 from tqdm import tqdm, trange
 
+from utils import almacenar_dataframe
+
 COLUMNAS_ALMACENAR = ['Time', 'Temperature', ' Humidity', ' Wind Speed',
                       'T G4 STR1', 'T G4 STR2', 'T MONO', 'T G3 STR2', 'T G3 STR1',
                       'PIR F1', 'PIR R1', 'PIR F2', 'PIR R2',
@@ -96,17 +98,5 @@ def cambiar_a_NA_si_valor_inferior_a_umbral(df, columnas, umbral):
         df[columna] = df[columna].apply(lambda x: pd.NA if x < umbral else x)
     return df
 
-def almacenar_dataframe(df : pd.DataFrame):
-     # Guardar el dataframe unificado en un fichero csv en la carpeta out
-    print("Guardando el fichero")
-    # Pongo una barra de progreso para mostrar el progreso del guardado del fichero, ya que puede tardar un poco si el dataframe es muy grande
-    
-    if ALMACENAR_XLSX:
-        df.to_excel(os.path.join('out', 'unificado.xlsx'), engine='xlsxwriter', index=False)
-        print('Fichero unificado guardado en out/unificado.xlsx')
-        
-    df.to_csv(os.path.join('out', 'unificado.csv'), index=False)
-    print('Fichero unificado guardado en out/unificado.csv')
-
 df = generar_dataframe()
-almacenar_dataframe(df)
+almacenar_dataframe(df, "unificado", almacenar_xlsx=ALMACENAR_XLSX)
