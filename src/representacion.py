@@ -108,7 +108,7 @@ def fila_diferencia_series(metodo, serie1, serie2):
         serie2: segunda serie temporal
     """
     
-    funciones_diferencia = [rmse, mae]
+    funciones_diferencia = [rmse, mae, mape]
     nombre_funciones = [nom for nom in [fun.__name__.upper() for fun in funciones_diferencia]]
     
     diferencias = [dif for dif in [fun(serie1, serie2) for fun in funciones_diferencia]]

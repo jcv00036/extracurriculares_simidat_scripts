@@ -109,3 +109,13 @@ def mae(serie1: pd.Series, serie2: pd.Series):
         serie2: segunda serie temporal
     """
     return (serie1 - serie2).abs().mean()
+
+def mape(serie1: pd.Series, serie2: pd.Series):
+    """
+    Calcula el error porcentual absoluto medio entre dos series temporales
+
+    Args:
+        serie1: primera serie temporal
+        serie2: segunda serie temporal
+    """
+    return ((serie1 - serie2).abs() / serie1.abs()).mean() * 100
