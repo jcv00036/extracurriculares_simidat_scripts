@@ -119,3 +119,18 @@ def mape(serie1: pd.Series, serie2: pd.Series):
         serie2: segunda serie temporal
     """
     return ((serie1 - serie2).abs() / serie1.abs()).mean() * 100
+
+def test_normalidad(serie: pd.Series):
+    """
+    Realiza un test de normalidad de Anderson-Darling sobre una serie temporal
+
+    Args:
+        serie: serie temporal a analizar
+    Returns:
+        diccionario con los resultados del test de normalidad
+    """
+    muestras = serie.dropna().values    
+    resultado = anderson(muestras, dist='norm', method='interpolate')
+    
+    return {"pvalor": resultado.pvalue,
+            "estadistico": resultado.statistic}

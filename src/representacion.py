@@ -97,6 +97,38 @@ def mostrar_scatter_plot(serie_x, serie_y, titulo=None, titulo_serie_x=None, tit
     plt.grid()
     plt.show()
     
+def mostrar_boxplot(series, titulos=None, titulo_figura=None, u_medida=None):
+    """
+    
+    Grafica un boxplot de múltiples series temporales
+
+    Args:
+        series: lista de series temporales
+        titulos: lista de títulos para cada serie (opcional, no necesita ser del mismo tamaño que series)
+        titulo_figura: título de la figura (opcional)
+        u_medida: unidad de medida para el eje y (opcional)
+    """
+    titulos = titulos if titulos else [f'Serie {i+1}' for i in range(len(series))]
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    plt.boxplot(series, label=titulos, patch_artist=True, medianprops=dict(color='red'), boxprops=dict(alpha=0.4))  # Pongo la línea de media en color rojo y la caja transparente para que se vea el scatter plot de los valores individuales    
+    # Dibujo el scatter plot de los valores individuales para cada serie
+    for i, serie in enumerate(series):
+        x = np.random.normal(i + 1, 0.04, size=len(serie))  # Añade un poco de ruido para que los puntos no se superpongan
+        # Reduzco el tamaño de los puntos
+        plt.scatter(x, serie, alpha=0.15, s=0.5)
+    
+    if titulo_figura:
+        plt.title(titulo_figura)
+    plt.ylabel(f'Valor ({u_medida})' if u_medida else 'Valor')
+    
+    # Para que dibuje los nombres de las series en el eje x, en lugar de 1 2 3
+    ax.set_xticks(range(1, len(series) + 1))
+    ax.set_xticklabels(titulos)
+    
+    plt.grid()
+    plt.show()
+    
 def fila_diferencia_series(metodo, serie1, serie2):
     """
     
