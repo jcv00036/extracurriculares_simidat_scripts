@@ -5,13 +5,17 @@ a formato long, para poder analizar los efectos de la disposición de las placas
 
 import os
 import pandas as pd
+import tqdm
 
 from utils import almacenar_dataframe
+from config import conf, CategoriaConf
 
 os.chdir(__file__.replace(__file__.split("/")[-1], ""))                         # Cambia el directorio de trabajo al directorio del script para que no haga cosas graciosas
 
-RUTA_ENTRADA = "out/unificado.csv"
-NOMBRE_FICHERO_SALIDA = "unificado_long"
+RUTA_ENTRADA = f"{conf.get(CategoriaConf.FICHEROS, "fichero_df_procesado")}.csv"
+NOMBRE_FICHERO_SALIDA = conf.get(CategoriaConf.FICHEROS, "fichero_df_long")
+ALMACENAR_XLSX = conf.getboolean(CategoriaConf.CONSTANTES, "almacenar_xlsx")
+
 STRINGS = ["1_1", "1_2", "2_1", "2_2", "3_1", "3_2", "4_1", "4_2", "5_1", "5_2"]
 NOMBRES_VARIABLES_DF = [f"Pdc{string}" for string in STRINGS]
 VALORES_VARIABLES = {
@@ -29,7 +33,7 @@ df = pd.read_csv(RUTA_ENTRADA)
 df_long = pd.melt(df, id_vars=["Datetime"], value_vars=NOMBRES_VARIABLES_DF, var_name="Placa", value_name="Pdc")
 
 # Creo las columnas de las variables a partir del nombre de la placa
-for nombre_variable, valores in VALORES_VARIABLES.items():
+for nombre_variable, valores in tqdm.tqdm(VALORES_VARIABLES.items(), desc="Mapeando variables", unit="variable"):
     df_long[nombre_variable] = df_long["Placa"].map(valores)
 
 # Transformo la columna de fecha a tipo datetime
@@ -43,5 +47,5 @@ df_long["String"] = df_long["Placa"].apply(lambda x: x.replace("Pdc", "").split(
 df_long = df_long.drop(columns=["Placa"])
 df_long = df_long[["Datetime", "Grupo", "String", "Pdc"] + list(VALORES_VARIABLES.keys())]      # Para que al visualizarlo quede más claro de dónde es la medida
 
-# No exporto a xlsx porque es un fichero muy grande y el formato no lo permite
-almacenar_dataframe(df_long, NOMBRE_FICHERO_SALIDA, almacenar_xlsx=False)
+print("Almacenando dataframe final en fichero...")
+almacenar_dataframe(df_long, NOMBRE_FICHERO_SALIDA, almacenar_xlsx=ALMACENAR_XLSX)
