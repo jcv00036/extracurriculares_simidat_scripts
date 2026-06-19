@@ -5,3 +5,4 @@ datos/*
 !datos/*.py
 */__pycache__/*
 salida/*
+.vscode/

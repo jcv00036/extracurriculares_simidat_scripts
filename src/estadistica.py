@@ -120,6 +120,16 @@ def mape(serie1: pd.Series, serie2: pd.Series):
     """
     return ((serie1 - serie2).abs() / serie1.abs()).mean() * 100
 
+def mbe(serie1: pd.Series, serie2: pd.Series):
+    """
+    Calcula el error medio entre dos series temporales
+
+    Args:
+        serie1: primera serie temporal
+        serie2: segunda serie temporal
+    """
+    return (serie1 - serie2).mean()
+
 def test_normalidad(serie: pd.Series):
     """
     Realiza un test de normalidad de Anderson-Darling sobre una serie temporal
