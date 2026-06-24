@@ -159,12 +159,7 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
         variables_ficticias: lista de nombres de las variables ficticias (el orden debe coincidir con el orden de los nombres de las series)
         nombres_series: lista de nombres que recibiran las series generadas por las variables ficticias
     Returns:
-        p_valores: diccionario con los p-valores de los test de normalidad de cada serie
-        normales: booleano que indica si todas las series siguen una distribución normal
-        diferentes: booleano que indica si hay diferencias significativas entre las series
-        p_valor: p-valor del test de Friedman o ANOVA
-        estadistico: estadístico del test de Friedman o ANOVA
-        tabla_diferencias: DataFrame con los resultados de las comparaciones entre las series (mbe)
+        Diccionario con todas los resultados
         
     """
     
@@ -230,21 +225,38 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
         for serie2 in df_series.values():
             diccionario_tabla[serie.name].append(0.0)
     
-    tabla_diferencias = pd.DataFrame(diccionario_tabla)
-    tabla_diferencias.set_index("Serie", inplace=True)
+    # Tabla de sesgo medio (mbe)
+    tabla_diferencias_sesgo_medio = pd.DataFrame(diccionario_tabla)
+    tabla_diferencias_sesgo_medio.set_index("Serie", inplace=True)
+    
+    # Tabla de diferencias porcentuales (mape)
+    tabla_porcentajes = tabla_diferencias_sesgo_medio.copy()
     
     for (serie1, serie2) in pruebas:
         if serie1.name != serie2.name:
             # Uno los dataframes según la hora de la lectura para que tengan el mismo tamaño y poder aplicar el test de Wilcoxon
             df_unido = pd.merge(serie1, serie2, on="Datetime", suffixes=('_' + serie1.name, '_' + serie2.name))
             
-            mbe_series = mbe(df_unido[f"{variable}_{serie1.name}"], df_unido[f"{variable}_{serie2.name}"])
-            tabla_diferencias.loc[serie1.name, serie2.name] = mbe_series
+            variable_s1 = f"{variable}_{serie1.name}"
+            variable_s2 = f"{variable}_{serie2.name}"
             
+            mbe_series = mbe(df_unido[variable_s1], df_unido[variable_s2])
+            mape_series = mape(df_unido[variable_s1], df_unido[variable_s2])
+            tabla_diferencias_sesgo_medio.loc[serie1.name, serie2.name] = mbe_series
+            tabla_porcentajes.loc[serie1.name, serie2.name] = mape_series
+
     # Muestro un diagrama de cajas y bigotes para cada serie para ver la distribución de los datos
     mostrar_boxplot([serie[variable] for serie in df_series.values()], nombres_series)
                         
-    return p_valores, normales, diferentes, p_valor, estadistico, tabla_diferencias
+    return {
+        "pvalores_normalidad" : p_valores, 
+        "series_normales" : normales,
+        "series_diferentes" : diferentes,
+        "pvalor_equivalencia" : p_valor,
+        "estadistico_equivalencia" : estadistico,
+        "tabla_diferencias_mbe" : tabla_diferencias_sesgo_medio,
+        "tabla_diferencias_mape" : tabla_porcentajes
+    }
 
 def evaluar_diferencia_variable_on_off(df: pd.DataFrame, variable: str, variable_ficticia: str, nombre_serie: str = None):
     """
@@ -270,28 +282,30 @@ def evaluar_diferencia_variable_on_off(df: pd.DataFrame, variable: str, variable
     
     return evaluar_diferencias_series(df_negado, variable, [variable_ficticia, nombre_variable], [f"{nombre_serie}_SI", f"{nombre_serie}_NO"])
 
-def interpretar_diferencias_series(p_valores: dict, normales: bool, diferentes: bool, p_valor: float, estadistico: float, tabla_diferencias: pd.DataFrame):
+def interpretar_diferencias_series(resultados : dict):
     """
     Imprime las conclusiones obtenidas a partir de los resultados devueltos por la función evaluar_diferencias_series
 
     Args:
-        salida de la función `evaluar_diferencias_series` o `evaluar_diferencia_variable_on_off`
+        Diccionario de salida de la función `evaluar_diferencias_series` o `evaluar_diferencia_variable_on_off`
     Returns:
         (los mismos valores que recibe como argumentos para poder utilizar la función en una sola línea con las otras dos)
-        p_valores: diccionario con los p-valores de los test de normalidad de cada serie
-        normales: booleano que indica si todas las series siguen una distribución normal
-        diferentes: booleano que indica si hay diferencias significativas entre las series
-        p_valor: p-valor del test de Friedman o ANOVA
-        estadistico: estadístico del test de Friedman o ANOVA
-        tabla_diferencias: DataFrame con los resultados de las comparaciones entre las series
     """
     
     np.set_printoptions(legacy='1.25')  # Para que los números se muestren bien 
     
-    print(f"Interpretación del resultado:")
-    print(f"- Los p-valores de los test de normalidad son {p_valores}, lo que indica que las series {'siguen' if normales else 'no siguen'} una distribución normal.")
-    print(f"- El p-valor de la prueba de equivalencia es {p_valor:.5f}, lo que indica que {'hay' if diferentes else 'no hay'} diferencias significativas entre las series.")
-    print(f"- El estadístico del test es {estadistico:.5f}.")
-    print(f"- La tabla de diferencias (MBE) entre las series es:\n{tabla_diferencias}")
+    tabla_mbe = resultados.get("tabla_diferencias_mbe")
+
+    # Buscamos la serie dominante (la que tiene el mayor sesgo medio con respecto a las demás)
+    medias_mbe = tabla_mbe.mean(axis=1)
+    serie_dominante = medias_mbe.idxmax()   # Lo obtenemos calculando la media de cada fila y obteniendo el índice del valor máximo que será la serie con mayor sesgo medio con respecto a las demás
     
-    return p_valores, normales, diferentes, p_valor, estadistico, tabla_diferencias
+    print(f"Interpretación del resultado:")
+    print(f"- Los p-valores de los test de normalidad son {resultados.get('pvalores_normalidad')}, lo que indica que las series {'siguen' if resultados.get('series_normales') else 'no siguen'} una distribución normal.")
+    print(f"- El p-valor de la prueba de equivalencia es {resultados.get('pvalor_equivalencia'):.5f}, lo que indica que {'hay' if resultados.get('series_diferentes') else 'no hay'} diferencias significativas entre las series.")
+    print(f"- El estadístico del test es {resultados.get('estadistico_equivalencia'):.5f}.")
+    print(f"- La tabla de diferencias (MBE) entre las series es:\n{resultados.get('tabla_diferencias_mbe')}")
+    print(f"- Para cada serie, la media de diferencias respecto a las demás es:\n{medias_mbe}")
+    print(f"- La serie dominante es '{serie_dominante}'")
+
+    return resultados
