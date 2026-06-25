@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 import tabulate
 
-from .estadistica import *
-
 def mostrar_serie(serie, titulo=None):
     """
     
@@ -140,6 +138,8 @@ def fila_diferencia_series(metodo, serie1, serie2):
         serie2: segunda serie temporal (serie a evaluar)
     """
     
+    from .estadistica import rmse, mae, mape
+    
     funciones_diferencia = [rmse, mae, mape]
     nombre_funciones = [nom for nom in [fun.__name__.upper() for fun in funciones_diferencia]]
     
@@ -160,10 +160,5 @@ def tabla_diferencias(filas):
     """
     tabla = pd.concat(filas, ignore_index=True)
     tabla.columns = [r"\textbf{"+c+"}" for c in tabla.columns]
-    
-    # Buscamos la mejor precisión (menor error) para cada métrica y la resaltamos en negrita
-    for col in tabla.columns[1:]:
-        min_val = tabla[col].min()
-        tabla[col] = tabla[col].apply(lambda x: r"\textbf{"+str(x)+"}" if x == min_val else str(x))
     
     return tabla.to_latex(index=False, escape=False)

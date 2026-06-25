@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from scipy.stats import anderson
 
-from .representacion import mostrar_boxplot
 
 def bland_altman(serie1: pd.Series, serie2: pd.Series, df: pd.DataFrame):
     """
@@ -239,6 +238,7 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
             tabla_porcentajes.loc[serie1.name, serie2.name] = mape_series
 
     # Muestro un diagrama de cajas y bigotes para cada serie para ver la distribución de los datos
+    from .representacion import mostrar_boxplot
     mostrar_boxplot([serie[variable] for serie in df_series.values()], nombres_series)
                         
     return {
