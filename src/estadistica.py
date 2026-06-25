@@ -10,8 +10,8 @@ def bland_altman(serie1: pd.Series, serie2: pd.Series, df: pd.DataFrame):
     Realiza un test Bland Altman para comparar dos series temporales
     
     Args:
-        serie1: primera serie temporal a comparar
-        serie2: segunda serie temporal a comparar
+        serie1: primera serie temporal a comparar (serie de referencia)
+        serie2: segunda serie temporal a comparar (serie a evaluar)
         df: DataFrame que contiene las series (se utiliza para calcular el tamaño de la muestra)
     Returns:
         diccionario de resultados con el formato:
@@ -26,17 +26,10 @@ def bland_altman(serie1: pd.Series, serie2: pd.Series, df: pd.DataFrame):
         }
     """
     
-    d = []
-    m = []
-    sesgo = 0
-
     # Calculo los vectores de diferencias y de media 
-    for i in range(len(df)):
-        d.append(serie1.iloc[i] - serie2.iloc[i])
-        m.append((serie1.iloc[i] + serie2.iloc[i]) / 2)
-        sesgo += d[i]
-        
-    sesgo /= len(df)    # Calculo el sesgo como la media de las diferencias
+    d = (serie1 - serie2).tolist()
+    m = ((serie1 + serie2) / 2).tolist()
+    sesgo = sum(d) / len(d)
 
     # Verifico normalidad con el test de Anderson-Darling porque la muestra es demasiado grande para Shapiro
     from scipy.stats import anderson
