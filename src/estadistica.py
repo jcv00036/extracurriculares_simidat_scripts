@@ -218,11 +218,11 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
             diccionario_tabla[serie.name].append(0.0)
     
     # Tabla de sesgo medio (mbe)
-    tabla_diferencias_sesgo_medio = pd.DataFrame(diccionario_tabla)
-    tabla_diferencias_sesgo_medio.set_index("Serie", inplace=True)
+    tabla_diferencia_medias = pd.DataFrame(diccionario_tabla)
+    tabla_diferencia_medias.set_index("Serie", inplace=True)
     
     # Tabla de diferencias porcentuales (mape)
-    tabla_porcentajes = tabla_diferencias_sesgo_medio.copy()
+    tabla_porcentajes = tabla_diferencia_medias.copy()
     
     for (serie1, serie2) in pruebas:
         if serie1.name != serie2.name:
@@ -232,10 +232,15 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
             variable_s1 = f"{variable}_{serie1.name}"
             variable_s2 = f"{variable}_{serie2.name}"
             
-            mbe_series = mbe(df_unido[variable_s1], df_unido[variable_s2])
-            mape_series = mape(df_unido[variable_s1], df_unido[variable_s2])
-            tabla_diferencias_sesgo_medio.loc[serie1.name, serie2.name] = mbe_series
-            tabla_porcentajes.loc[serie1.name, serie2.name] = mape_series
+            s1 = df_unido[variable_s1]
+            s2 = df_unido[variable_s2]
+            
+            # Calculo la diferencia entre las medias de las dos series y la diferencia porcentual entre ellas
+            diferencia_medias = s1.mean() - s2.mean()
+            diferencia_porcentual = abs((s1.mean() - s2.mean()) / ((s1.mean() + s2.mean()) / 2)) * 100 if (s1.mean() + s2.mean()) / 2 != 0 else 0
+            
+            tabla_diferencia_medias.loc[serie1.name, serie2.name] = diferencia_medias
+            tabla_porcentajes.loc[serie1.name, serie2.name] = diferencia_porcentual
 
     # Muestro un diagrama de cajas y bigotes para cada serie para ver la distribución de los datos
     from .representacion import mostrar_boxplot
@@ -247,8 +252,8 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
         "series_diferentes" : diferentes,
         "pvalor_equivalencia" : p_valor,
         "estadistico_equivalencia" : estadistico,
-        "tabla_diferencias_mbe" : tabla_diferencias_sesgo_medio,
-        "tabla_diferencias_mape" : tabla_porcentajes
+        "tabla_diferencias_medias" : tabla_diferencia_medias,
+        "tabla_diferencias_porcentajes" : tabla_porcentajes
     }
 
 def evaluar_diferencia_variable_on_off(df: pd.DataFrame, variable: str, variable_ficticia: str, nombre_serie: str = None):
@@ -261,11 +266,7 @@ def evaluar_diferencia_variable_on_off(df: pd.DataFrame, variable: str, variable
         variable_ficticia: nombre de la variable ficticia
         nombre_serie: nombre que recibirá la serie generada por la variable ficticia (+ "_SI" y "_NO")
     Returns:
-        p_valor: p-valor del test de normalidad
-        normal: booleano que indica si la serie sigue una distribución normal
-        diferente: booleano que indica si hay diferencias significativas entre las series
-        estadistico: estadístico del test de normalidad
-        mbe: error medio entre las dos series
+        Diccionario con todas los resultados
     """
     
     # Creo un dataframe con una nueva variable ficticia en la que se niegue el valor de la variable ficticia original para poder comparar las dos series
@@ -287,18 +288,19 @@ def interpretar_diferencias_series(resultados : dict):
     
     np.set_printoptions(legacy='1.25')  # Para que los números se muestren bien 
     
-    tabla_mbe = resultados.get("tabla_diferencias_mbe")
+    tabla_medias = resultados.get("tabla_diferencias_medias")
 
     # Buscamos la serie dominante (la que tiene el mayor sesgo medio con respecto a las demás)
-    medias_mbe = tabla_mbe.mean(axis=1)
-    serie_dominante = medias_mbe.idxmax()   # Lo obtenemos calculando la media de cada fila y obteniendo el índice del valor máximo que será la serie con mayor sesgo medio con respecto a las demás
+    medias = tabla_medias.mean(axis=1)
+    serie_dominante = medias.idxmax()   # Lo obtenemos calculando la media de cada fila y obteniendo el índice del valor máximo que será la serie con mayor sesgo medio con respecto a las demás
     
     print(f"Interpretación del resultado:")
     print(f"- Los p-valores de los test de normalidad son {resultados.get('pvalores_normalidad')}, lo que indica que las series {'siguen' if resultados.get('series_normales') else 'no siguen'} una distribución normal.")
     print(f"- El p-valor de la prueba de equivalencia es {resultados.get('pvalor_equivalencia'):.5f}, lo que indica que {'hay' if resultados.get('series_diferentes') else 'no hay'} diferencias significativas entre las series.")
     print(f"- El estadístico del test es {resultados.get('estadistico_equivalencia'):.5f}.")
-    print(f"- La tabla de diferencias (MBE) entre las series es:\n{resultados.get('tabla_diferencias_mbe')}")
-    print(f"- Para cada serie, la media de diferencias respecto a las demás es:\n{medias_mbe}")
+    print(f"- La tabla de diferencias de medias entre las series es:\n{resultados.get('tabla_diferencias_medias')}")
+    print(f"- La tabla de diferencias porcentuales entre las series es:\n{resultados.get('tabla_diferencias_porcentajes')}")
+    print(f"- Para cada serie, la media de diferencias respecto a las demás es:\n{medias}")
     print(f"- La serie dominante es '{serie_dominante}'")
 
     return resultados
