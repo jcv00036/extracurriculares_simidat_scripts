@@ -2,6 +2,8 @@ import itertools as it
 import pandas as pd
 import numpy as np
 from scipy.stats import anderson
+from sklearn.base import RegressorMixin
+from sklearn.model_selection import GridSearchCV
 
 
 def bland_altman(serie1: pd.Series, serie2: pd.Series, df: pd.DataFrame):
@@ -304,3 +306,54 @@ def interpretar_diferencias_series(resultados : dict):
     print(f"- La serie dominante es '{serie_dominante}'")
 
     return resultados
+
+def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, variable_objetivo : str, variables_entrada : list, param_grid : dict = None, prop_test : float = 0.3, nombre_regresor : str = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Prueba un regresor con un conjunto de datos y devuelve las métricas de error obtenidas en el conjunto de test y validación.
+
+    Args:
+        reg: regresor a probar
+        df: DataFrame con los datos
+        semilla: semilla para aleatorios
+        variable_objetivo: nombre de la columna que contiene la variable objetivo
+        variables_entrada: lista de nombres de las columnas que contienen las variables de entrada
+        param_grid: diccionario con los hiperparámetros a probar (por defecto None)
+        prop_test: proporción del conjunto de test (por defecto 0.3)
+        nombre_regresor: nombre del regresor (por defecto se utiliza el nombre de la clase del regresor)
+    Returns:
+        una tupla con el dataframe que contiene la serie (`variable_objetivo`)  y las predicciones del regresor (`"prediccion"`) y la fila de la tabla de resultados
+    """
+    
+    from .utils import crear_conjuntos_aprendizaje_test
+    
+    if nombre_regresor is None: nombre_regresor = reg.__class__.__name__                # Si no se especifica un nombre para el regresor, se utiliza el nombre de la clase del regresor
+    
+    df_train, df_test = crear_conjuntos_aprendizaje_test(df, prop_test=prop_test, semilla=semilla)
+    
+    # Reentrenamos el regresor con el conjunto de validación para minimizar el error    
+    # Si el regresor tiene hiperparámetros, hacemos una búsqueda en cuadrícula para encontrar los mejores hiperparámetros
+    if param_grid is not None:
+        print(f"Probando hiperparámetros para {nombre_regresor}:\n{param_grid}")
+        grid_search = GridSearchCV(reg, param_grid, cv=5, scoring="neg_mean_squared_error", n_jobs=-1)
+        grid_search.fit(df_train[variables_entrada], df_train[variable_objetivo])
+        
+        reg_final = grid_search.best_estimator_
+        print(f"Mejores hiperparámetros encontrados para {nombre_regresor}: {grid_search.best_params_}")
+    else:
+        # Usamos el regresor tal cual sin búsqueda de hiperparámetros (añadimos el parámetros "n_jobs=-1" para que use todos los núcleos de la CPU si el regresor lo permite)
+        reg_final = reg
+        parametros = reg_final.get_params()
+        parametros.update({"n_jobs": -1})
+        reg_final.set_params(**parametros)
+        reg_final.fit(df_train[variables_entrada], df_train[variable_objetivo])
+    
+    # Evaluamos el regresor con el conjunto de test
+    df_test["prediccion"] = reg_final.predict(df_test[variables_entrada])
+    
+    # Creamos la fila de resultados
+    from .representacion import fila_diferencia_series
+    fila = fila_diferencia_series(nombre_regresor, df_test[variable_objetivo], df_test["prediccion"])
+    
+    df_resultado = df_test[variable_objetivo].to_frame().join(df_test["prediccion"].to_frame(), how="inner")    # Creamos un DataFrame con la serie objetivo y las predicciones del regresor para poder devolverlo junto con la fila de resultados
+    
+    return df_resultado, fila

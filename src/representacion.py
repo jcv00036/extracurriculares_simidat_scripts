@@ -127,7 +127,7 @@ def mostrar_boxplot(series, titulos=None, titulo_figura=None, u_medida=None):
     plt.grid()
     plt.show()
     
-def fila_diferencia_series(metodo, serie1, serie2):
+def fila_diferencia_series(metodo, serie1, serie2) -> pd.DataFrame:
     """
     
     Crea la fila de una tabla de las diferencias entre dos series temporales
@@ -136,6 +136,9 @@ def fila_diferencia_series(metodo, serie1, serie2):
         metodo: nombre del método de predicción utilizado
         serie1: primera serie temporal (serie de referencia)
         serie2: segunda serie temporal (serie a evaluar)
+    
+    Returns:
+        fila: DataFrame con una fila que contiene el nombre del método y las métricas de diferencia entre las dos series
     """
     
     from .estadistica import rmse, mae, mape
@@ -150,13 +153,16 @@ def fila_diferencia_series(metodo, serie1, serie2):
     
     return fila
 
-def tabla_diferencias(filas):
+def tabla_diferencias(filas) -> str:
     """
     
     Crea una tabla de las diferencias entre varias series temporales
 
     Args:
         filas: lista de filas con las diferencias entre series temporales (generadas por la función fila_diferencia_series)
+        
+    Returns:
+        tabla en formato LaTeX
     """
     tabla = pd.concat(filas, ignore_index=True)
     tabla.columns = [r"\textbf{"+c+"}" for c in tabla.columns]
