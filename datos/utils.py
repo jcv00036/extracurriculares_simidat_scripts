@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def almacenar_dataframe(df : pd.DataFrame, nombre_fichero : str, almacenar_xlsx : bool = True):
+def almacenar_dataframe(df : pd.DataFrame, nombre_fichero : str, almacenar_xlsx : bool = True, almacenar_indice : bool = False):
      # Guardar el dataframe unificado en un fichero csv en la carpeta out
     logger.info("Guardando el fichero")
     # Pongo una barra de progreso para mostrar el progreso del guardado del fichero, ya que puede tardar un poco si el dataframe es muy grande
@@ -22,8 +22,8 @@ def almacenar_dataframe(df : pd.DataFrame, nombre_fichero : str, almacenar_xlsx 
                 df.iloc[i:i+1000000].to_excel(f'{nombre_fichero}_{i//1000000 + 1}.xlsx', engine='xlsxwriter', index=False)
                 logger.info(f'Fichero {nombre_fichero.split("/")[-1]}_{i//1000000 + 1}.xlsx guardado en {nombre_fichero}_{i//1000000 + 1}.xlsx')
         else:
-            df.to_excel(f'{nombre_fichero}.xlsx', engine='xlsxwriter', index=False)
+            df.to_excel(f'{nombre_fichero}.xlsx', engine='xlsxwriter', index=almacenar_indice)
             logger.info(f'Fichero {nombre_fichero.split("/")[-1]} guardado en {nombre_fichero}.xlsx')
         
-    df.to_csv(f'{nombre_fichero}.csv', index=False)
+    df.to_csv(f'{nombre_fichero}.csv', index=almacenar_indice)
     logger.info(f'Fichero {nombre_fichero.split("/")[-1]} guardado en {nombre_fichero}.csv')
