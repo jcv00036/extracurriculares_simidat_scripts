@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import math
+from sklearn.base import RegressorMixin
 
 def guardar_tabla_latex(tabla: pd.DataFrame, nombre_archivo: str, caption: str, label: str):
     """
@@ -41,3 +42,55 @@ def crear_conjuntos_aprendizaje_test(df: pd.DataFrame, prop_test: float = 0.3, s
     df_pruebas = df_barajado.iloc[punto_corte:]
     
     return df_aprendizaje, df_pruebas
+
+def realizar_prueba_regresor(regresor : RegressorMixin, df : pd.DataFrame, variable_objetivo : str, variables_independientes : list[str], param_grid : dict, semilla : int, prop_test : float = 0.3, nombre_regresor : str = None, nombre_fichero : str = None, unidad : str = None) -> pd.DataFrame:
+    """
+    Prueba un regresor, almacena los resultados en el fichero de salida (si se le pasa uno) y  devuelve el resultado de las pruebas
+
+    Args:
+        regresor : El regresor a probar.
+        df : El DataFrame con los datos de entrada.
+        variable_objetivo : Variable que se pretende predecir.
+        variables_independientes : Variables con las que se pretende predecir `variable_objetivo`.
+        param_grid : La cuadrícula de hiperparámetros a optimizar.
+        semilla : La semilla para la aleatoriedad.
+        prop_test : Proporción del tamaño del conjunto de test.
+        nombre_regresor : El nombre del regresor (para mostrarlo en los resultados, por defecto es el nombre de la clase).
+        nombre_fichero : El nombre del archivo donde se guardarán los resultados (si no se le pasa, no se guardan resultados).
+        unidad : La unidad de la variable objetivo (para mostrarla en los resultados).
+    """
+    nombre_regresor = nombre_regresor if nombre_regresor else regresor.__class__.__name__
+    
+    print(f"{nombre_regresor}:")
+
+    try:
+        if not nombre_fichero: raise FileNotFoundError()
+        resultados = pd.read_csv(nombre_fichero)
+        hiperparametros = pd.read_csv(f"{nombre_fichero.replace('.csv', '')}_hiperparametros.csv").iloc[0].to_dict()
+        ejecutar_regresion = False
+    except FileNotFoundError:
+        ejecutar_regresion = True
+
+    from . import estadistica as est
+    from . import representacion as rep
+    
+    if ejecutar_regresion:
+        resultados, fila_reg_lin, hiperparametros = est.probar_regresor(regresor, df, semilla, variable_objetivo, variables_independientes, param_grid, prop_test, nombre_regresor)
+        
+        # Guardo los resultados en un csv
+        if nombre_fichero: 
+            # Guardo los hiperparámetros del modelo en otro csv
+            pd.DataFrame([hiperparametros]).to_csv(f"{nombre_fichero.replace('.csv', '')}_hiperparametros.csv", index=False)
+            resultados.to_csv(nombre_fichero, index=False)
+        
+    resultados_ba = est.bland_altman(resultados[variable_objetivo], resultados["prediccion"], resultados)
+    est.interpretar_bland_altman(resultados_ba, unidad if unidad else " ")
+    rep.mostrar_bland_altman(resultados_ba, f"Comparación entre la predicción del modelo de {nombre_regresor.lower().replace('_', ' ')} y los valores reales de {variable_objetivo}", unidad if unidad else " ")
+    
+    fila = rep.fila_diferencia_series(nombre_regresor, resultados[variable_objetivo], resultados["prediccion"])
+    
+    print(f"Mejores hiperparámetros encontrados para {nombre_regresor}:\n{hiperparametros}")
+    print(f"Fila de resultados para {nombre_regresor}:\n{fila}")
+    
+    return fila
+    

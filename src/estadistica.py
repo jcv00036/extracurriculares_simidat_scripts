@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from scipy.stats import anderson
 from sklearn.base import RegressorMixin
-from sklearn.model_selection import GridSearchCV
+from sklearn.experimental import enable_halving_search_cv
+from sklearn.model_selection import GridSearchCV, HalvingRandomSearchCV
 
 
 def bland_altman(serie1: pd.Series, serie2: pd.Series, df: pd.DataFrame):
@@ -307,7 +308,7 @@ def interpretar_diferencias_series(resultados : dict):
 
     return resultados
 
-def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, variable_objetivo : str, variables_entrada : list, param_grid : dict = None, prop_test : float = 0.3, nombre_regresor : str = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, variable_objetivo : str, variables_entrada : list, param_grid : dict = None, prop_test : float = 0.3, nombre_regresor : str = None) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """
     Prueba un regresor con un conjunto de datos y devuelve las métricas de error obtenidas en el conjunto de test y validación.
 
@@ -321,7 +322,7 @@ def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, vari
         prop_test: proporción del conjunto de test (por defecto 0.3)
         nombre_regresor: nombre del regresor (por defecto se utiliza el nombre de la clase del regresor)
     Returns:
-        una tupla con el dataframe que contiene la serie (`variable_objetivo`)  y las predicciones del regresor (`"prediccion"`) y la fila de la tabla de resultados
+        una tupla con el dataframe que contiene la serie (`variable_objetivo`)  y las predicciones del regresor (`"prediccion"`); la fila de la tabla de resultados y los hiperparámetros del modelo final
     """
     
     from .utils import crear_conjuntos_aprendizaje_test
@@ -334,11 +335,12 @@ def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, vari
     # Si el regresor tiene hiperparámetros, hacemos una búsqueda en cuadrícula para encontrar los mejores hiperparámetros
     if param_grid is not None:
         print(f"Probando hiperparámetros para {nombre_regresor}:\n{param_grid}")
-        grid_search = GridSearchCV(reg, param_grid, cv=5, scoring="neg_mean_squared_error", n_jobs=-1)
-        grid_search.fit(df_train[variables_entrada], df_train[variable_objetivo])
+        hr_search = HalvingRandomSearchCV(reg, param_grid, n_candidates="exhaust", cv=5, scoring="neg_mean_squared_error", n_jobs=-1)
+        #grid_search = GridSearchCV(reg, param_grid, cv=5, scoring="neg_mean_squared_error", n_jobs=-1)
+        hr_search.fit(df_train[variables_entrada], df_train[variable_objetivo])
         
-        reg_final = grid_search.best_estimator_
-        print(f"Mejores hiperparámetros encontrados para {nombre_regresor}: {grid_search.best_params_}")
+        reg_final = hr_search.best_estimator_
+        print(f"Mejores hiperparámetros encontrados para {nombre_regresor}: {hr_search.best_params_}")
     else:
         # Usamos el regresor tal cual sin búsqueda de hiperparámetros (añadimos el parámetros "n_jobs=-1" para que use todos los núcleos de la CPU si el regresor lo permite)
         reg_final = reg
@@ -356,4 +358,4 @@ def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, vari
     
     df_resultado = df_test[variable_objetivo].to_frame().join(df_test["prediccion"].to_frame(), how="inner")    # Creamos un DataFrame con la serie objetivo y las predicciones del regresor para poder devolverlo junto con la fila de resultados
     
-    return df_resultado, fila
+    return df_resultado, fila, reg_final.get_params()
