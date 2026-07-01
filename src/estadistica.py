@@ -1,11 +1,14 @@
 import itertools as it
 import pandas as pd
 import numpy as np
+import sys
+import time
+
 from scipy.stats import anderson
 from sklearn.base import RegressorMixin
 from sklearn.experimental import enable_halving_search_cv
 from sklearn.model_selection import GridSearchCV, HalvingRandomSearchCV
-
+from tqdm.notebook import tqdm
 
 def bland_altman(serie1: pd.Series, serie2: pd.Series, df: pd.DataFrame):
     """
@@ -111,13 +114,22 @@ def mae(serie1: pd.Series, serie2: pd.Series):
 
 def mape(serie1: pd.Series, serie2: pd.Series):
     """
-    Calcula el error porcentual absoluto medio entre dos series temporales
-
+    Calcula el error porcentual absoluto medio entre dos series temporales.
     Args:
         serie1: primera serie temporal
         serie2: segunda serie temporal
     """
     return ((serie1 - serie2).abs() / serie1.abs()).mean() * 100
+
+def mdape(serie1: pd.Series, serie2: pd.Series):
+    """
+    Calcula el error porcentual absoluto mediano entre dos series temporales.
+    
+    Args:
+        serie1: primera serie temporal
+        serie2: segunda serie temporal
+    """
+    return ((serie1 - serie2).abs() / serie1.abs()).median() * 100
 
 def mbe(serie1: pd.Series, serie2: pd.Series):
     """
@@ -331,11 +343,36 @@ def probar_regresor(reg : RegressorMixin, df : pd.DataFrame, semilla : int, vari
     
     df_train, df_test = crear_conjuntos_aprendizaje_test(df, prop_test=prop_test, semilla=semilla)
     
+    # Normalizo las variables de entrada para que tengan media 0 y desviación típica 1 (esto es importante para algunos regresores como SVM o redes neuronales)
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    df_train[variables_entrada] = scaler.fit_transform(df_train[variables_entrada])
+    df_test[variables_entrada] = scaler.transform(df_test[variables_entrada])
+    
     # Reentrenamos el regresor con el conjunto de validación para minimizar el error    
     # Si el regresor tiene hiperparámetros, hacemos una búsqueda en cuadrícula para encontrar los mejores hiperparámetros
     if param_grid is not None:
+        
+        # Si algún hiperparámetro es NaN, lo sacamos del param grid para que utilice los valores por defecto
+        param_nan = []
+        for k, v in param_grid.items():
+            if any(pd.isna(v)):
+                param_nan.append(k)
+            
+            # Si alguno es una cadena de texto que contiene una tupla o un array, lo parseamos
+            if isinstance(v, str):
+                if (v.startswith("(") and v.endswith(")")) or (v.startswith("[") and v.endswith("]")): param_grid[k] = eval(v)
+            elif isinstance(v, list):
+                for i in range(len(v)):
+                    if isinstance(v[i], str):
+                        if (v[i].startswith("(") and v[i].endswith(")")) or (v[i].startswith("[") and v[i].endswith("]")): param_grid[k][i] = eval(v[i])
+                
+                
+        for k in param_nan:
+            param_grid.pop(k)
+        
         print(f"Probando hiperparámetros para {nombre_regresor}:\n{param_grid}")
-        hr_search = HalvingRandomSearchCV(reg, param_grid, n_candidates="exhaust", cv=5, scoring="neg_mean_squared_error", n_jobs=-1)
+        hr_search = HalvingRandomSearchCV(reg, param_grid, n_candidates="exhaust", cv=5, scoring="neg_mean_absolute_percentage_error", n_jobs=-1)
         #grid_search = GridSearchCV(reg, param_grid, cv=5, scoring="neg_mean_squared_error", n_jobs=-1)
         hr_search.fit(df_train[variables_entrada], df_train[variable_objetivo])
         

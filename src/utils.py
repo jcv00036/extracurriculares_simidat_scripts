@@ -62,19 +62,31 @@ def realizar_prueba_regresor(regresor : RegressorMixin, df : pd.DataFrame, varia
     nombre_regresor = nombre_regresor if nombre_regresor else regresor.__class__.__name__
     
     print(f"{nombre_regresor}:")
-
+    
+    # Creamos la carpeta por si no existe
+    if nombre_fichero: os.makedirs(os.path.dirname(nombre_fichero), exist_ok=True)
+    
+    hay_hiperparametros = False
+    hiperparametros = {}
+    
     try:
         if not nombre_fichero: raise FileNotFoundError()
-        resultados = pd.read_csv(nombre_fichero)
         hiperparametros = pd.read_csv(f"{nombre_fichero.replace('.csv', '')}_hiperparametros.csv").iloc[0].to_dict()
+        hay_hiperparametros = True
+        resultados = pd.read_csv(nombre_fichero)
         ejecutar_regresion = False
     except FileNotFoundError:
+        if not hiperparametros: hay_hiperparametros = False
         ejecutar_regresion = True
 
     from . import estadistica as est
     from . import representacion as rep
     
     if ejecutar_regresion:
+        
+        if hay_hiperparametros:
+            param_grid = {k: [v] for k, v in hiperparametros.items()}  # Si ya hay hiperparámetros, los utilizo para entrenar el modelo y no busco otros
+        
         resultados, fila_reg_lin, hiperparametros = est.probar_regresor(regresor, df, semilla, variable_objetivo, variables_independientes, param_grid, prop_test, nombre_regresor)
         
         # Guardo los resultados en un csv

@@ -141,9 +141,9 @@ def fila_diferencia_series(metodo, serie1, serie2) -> pd.DataFrame:
         fila: DataFrame con una fila que contiene el nombre del método y las métricas de diferencia entre las dos series
     """
     
-    from .estadistica import rmse, mae, mape
+    from .estadistica import rmse, mae, mape, mdape
     
-    funciones_diferencia = [rmse, mae, mape]
+    funciones_diferencia = [rmse, mae, mape, mdape]
     nombre_funciones = [nom for nom in [fun.__name__.upper() for fun in funciones_diferencia]]
     
     diferencias = [dif for dif in [fun(serie1, serie2) for fun in funciones_diferencia]]
