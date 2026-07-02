@@ -106,3 +106,41 @@ def realizar_prueba_regresor(regresor : RegressorMixin, df : pd.DataFrame, varia
     
     return fila
     
+def cargar_parametros_modelo(dir_paremtros : str) -> dict | None:
+    """
+    Carga los parámetros de un modelo desde un archivo CSV.
+
+    Args:
+        dir_paremtros : La ruta del archivo CSV que contiene los parámetros del modelo.
+
+    Returns:
+        Un diccionario con los parámetros del modelo si el archivo existe, de lo contrario None.
+    """
+    try:
+        parametros = pd.read_csv(dir_paremtros).iloc[0].to_dict()
+        
+        # Si algún hiperparámetro es NaN, lo sacamos del param grid para que utilice los valores por defecto
+        param_nan = []
+        for k, v in parametros.items():
+            if pd.isna(v):
+                param_nan.append(k)
+            elif isinstance(v, list):
+                if any(pd.isna(i) for i in v):
+                    param_nan.append(k)
+            
+            # Si alguno es una cadena de texto que contiene una tupla o un array, lo parseamos
+            if isinstance(v, str):
+                if (v.startswith("(") and v.endswith(")")) or (v.startswith("[") and v.endswith("]")): parametros[k] = eval(v)
+            elif isinstance(v, list):
+                for i in range(len(v)):
+                    if isinstance(v[i], str):
+                        if (v[i].startswith("(") and v[i].endswith(")")) or (v[i].startswith("[") and v[i].endswith("]")): parametros[k][i] = eval(v[i])
+                
+                
+        for k in param_nan:
+            parametros.pop(k)
+        
+        return parametros
+    except FileNotFoundError:
+        print(f"No se encontró el archivo de parámetros en {dir_paremtros}.")
+        return None
