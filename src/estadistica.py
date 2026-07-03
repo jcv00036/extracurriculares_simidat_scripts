@@ -268,7 +268,8 @@ def evaluar_diferencias_series(df: pd.Dataframe, variable: str, variables_fictic
         "pvalor_equivalencia" : p_valor,
         "estadistico_equivalencia" : estadistico,
         "tabla_diferencias_medias" : tabla_diferencia_medias,
-        "tabla_diferencias_porcentajes" : tabla_porcentajes
+        "tabla_diferencias_porcentajes" : tabla_porcentajes,
+        "media_total" : df[variable].mean()
     }
 
 def evaluar_diferencia_variable_on_off(df: pd.DataFrame, variable: str, variable_ficticia: str, nombre_serie: str = None):
@@ -303,12 +304,17 @@ def interpretar_diferencias_series(resultados : dict):
     
     np.set_printoptions(legacy='1.25')  # Para que los números se muestren bien 
     
-    tabla_medias = resultados.get("tabla_diferencias_medias")
+    tabla_medias = resultados.get("tabla_diferencias_medias").copy()
 
     # Buscamos la serie dominante (la que tiene el mayor sesgo medio con respecto a las demás)
-    medias = tabla_medias.mean(axis=1)
+    # Hacemos Nan los valores diagonales de la tabla de diferencias de medias para que no se tengan en cuenta al calcular la media de cada fila
+    for i in range(len(tabla_medias)):
+        tabla_medias.iloc[i, i] = np.nan
+    medias = tabla_medias.mean(axis=1, skipna=True)   # Calculamos la media de cada fila (cada serie) para obtener el sesgo medio con respecto a las demás
     serie_dominante = medias.idxmax()   # Lo obtenemos calculando la media de cada fila y obteniendo el índice del valor máximo que será la serie con mayor sesgo medio con respecto a las demás
     
+    impacto_serie_dominante = ((medias.max()/ resultados.get("media_total")) * 100) if resultados.get("media_total") != 0 else 0
+        
     print(f"Interpretación del resultado:")
     print(f"- Los p-valores de los test de normalidad son {resultados.get('pvalores_normalidad')}, lo que indica que las series {'siguen' if resultados.get('series_normales') else 'no siguen'} una distribución normal.")
     print(f"- El p-valor de la prueba de equivalencia es {resultados.get('pvalor_equivalencia'):.5f}, lo que indica que {'hay' if resultados.get('series_diferentes') else 'no hay'} diferencias significativas entre las series.")
@@ -317,6 +323,8 @@ def interpretar_diferencias_series(resultados : dict):
     print(f"- La tabla de diferencias porcentuales entre las series es:\n{resultados.get('tabla_diferencias_porcentajes')}")
     print(f"- Para cada serie, la media de diferencias respecto a las demás es:\n{medias}")
     print(f"- La serie dominante es '{serie_dominante}'")
+    print(f"- El impacto de la serie dominante ({serie_dominante}) es {impacto_serie_dominante:.2f}%")
+    
 
     return resultados
 
